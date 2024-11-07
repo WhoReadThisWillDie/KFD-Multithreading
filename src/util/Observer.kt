@@ -1,5 +1,5 @@
 package util
 
-public interface Observer {
+interface Observer {
     fun update(message: String)
 }

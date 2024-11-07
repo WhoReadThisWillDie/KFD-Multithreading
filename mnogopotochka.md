@@ -28,13 +28,13 @@
 
 #### 1. Использование `ScheduledThreadPoolExecutor` для автоматического обновления курсов валют
 
-Цель этого требования — симулировать реальный мир, где курсы валют постоянно меняются. Создайте задачу, которая автоматически обновляет курсы валют в вашем `Bank` объекте.
+Цель этого требования — симулировать реальный мир, где курсы валют постоянно меняются. Создайте задачу, которая автоматически обновляет курсы валют в вашем `monitor.Bank` объекте.
 
 ```kotlin
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
-class Bank {
+class monitor.Bank {
     val exchangeRates = ConcurrentHashMap<String, Double>()
 
     init {
@@ -54,7 +54,7 @@ class Bank {
 ```kotlin
 import java.util.concurrent.LinkedBlockingQueue
 
-class Bank {
+class monitor.Bank {
     val transactionQueue = LinkedBlockingQueue<model.Transaction>()
 
         init {
@@ -65,7 +65,7 @@ class Bank {
     class worker.Cashier : Thread() {
         override fun run() {
             while (true) {
-                val transaction = Bank.transactionQueue.take()
+                val transaction = monitor.Bank.transactionQueue.take()
                 // Обрабатываем транзакцию
             }
         }
@@ -95,10 +95,10 @@ class util.Logger : util.Observer {
 }
 ```
 
-В классе `Bank`, добавьте методы для регистрации и оповещения наблюдателей:
+В классе `monitor.Bank`, добавьте методы для регистрации и оповещения наблюдателей:
 
 ```kotlin
-class Bank {
+class monitor.Bank {
     private val observers = mutableListOf<util.Observer>()
 
         fun addObserver(observer: util.Observer) {
@@ -127,14 +127,14 @@ fun deposit(clientId: Int, amount: Double) {
 ```kotlin
 class model.Client(val id: Int, var balance: Double, var currency: String)
 
-class worker.Cashier(val id: Int, val bank: Bank) : Thread() {
+class worker.Cashier(val id: Int, val bank: monitor.Bank) : Thread() {
     fun deposit(clientId: Int, amount: Double) { /* ... */ }
     fun withdraw(clientId: Int, amount: Double) { /* ... */ }
     fun exchangeCurrency(clientId: Int, fromCurrency: String, toCurrency: String, amount: Double) { /* ... */ }
     fun transferFunds(senderId: Int, receiverId: Int, amount: Double) { /* ... */ }
 }
 
-class Bank {
+class monitor.Bank {
     val clients = ConcurrentHashMap<Int, model.Client>()
     val cashiers = ArrayList<worker.Cashier>()
     val exchangeRates = ConcurrentHashMap<String, Double>()

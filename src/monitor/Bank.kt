@@ -1,3 +1,5 @@
+package monitor
+
 import model.Client
 import model.Transaction
 import util.Observer
@@ -10,7 +12,7 @@ import java.util.concurrent.TimeUnit
 
 class Bank {
     val clients = ConcurrentHashMap<Int, Client>()
-    val cashiers = ArrayList<Cashier>()
+    private val cashiers = ArrayList<Cashier>()
     val exchangeRates = ConcurrentHashMap<String, Double>()
 
     val transactionQueue = LinkedBlockingQueue<Transaction>()
@@ -21,27 +23,45 @@ class Bank {
         exchangeRates["EUR/RUB"] = 104.0
         exchangeRates["EUR/USD"] = 1.1
 
+        cashiers.forEach {
+            it.start()
+        }
+
         val executor = ScheduledThreadPoolExecutor(1)
         executor.scheduleAtFixedRate({
             for (currency in exchangeRates.keys()) {
                 exchangeRates[currency] = getRandomExchangeRate(
                     exchangeRates[currency] ?: throw IllegalStateException("This currency does not exist")
                 )
+                notifyObservers("$currency rate changed to ${String.format("%.2f" ,exchangeRates[currency])}")
             }
-        }, 0, 5, TimeUnit.SECONDS)
+        }, 10, 10, TimeUnit.SECONDS)
     }
 
     private fun getRandomExchangeRate(currentRate: Double): Double {
         return currentRate * (Random().nextDouble() * 0.1 + 0.95)
     }
 
-    private fun addObserver(observer: Observer) {
+    fun addObserver(observer: Observer) {
         observers.add(observer)
     }
 
-    private fun notifyObservers(message: String) {
+    fun notifyObservers(message: String) {
         observers.forEach {
             it.update(message)
         }
+    }
+
+    fun addClient(client: Client) {
+        clients[client.id] = client
+    }
+
+    fun addCashier(cashier: Cashier) {
+        cashiers.add(cashier)
+        cashier.start()
+    }
+
+    fun addTransaction(transaction: Transaction) {
+        transactionQueue.add(transaction)
     }
 }
