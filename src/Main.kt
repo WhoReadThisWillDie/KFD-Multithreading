@@ -15,7 +15,7 @@ fun main() {
     val cashier2 = Cashier(2, bank)
     bank.addCashier(cashier1)
     bank.addCashier(cashier2)
-    bank.addObserver(Logger())
+    // bank.addObserver(Logger())
 
     repeat(100) {
         bank.addTransaction(Deposit(1, "USD", 1.0))

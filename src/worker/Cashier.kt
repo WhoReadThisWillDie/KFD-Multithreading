@@ -5,8 +5,6 @@ import model.Exchange
 import model.Transfer
 import model.Withdraw
 import monitor.Bank
-import java.util.concurrent.BlockingQueue
-import java.util.concurrent.LinkedBlockingQueue
 
 class Cashier(private val id: Int, private val bank: Bank) : Thread() {
     override fun run() {
@@ -31,7 +29,7 @@ class Cashier(private val id: Int, private val bank: Bank) : Thread() {
 
     private fun deposit(clientId: Int, currency: String, amount: Double) {
         require(amount > 0) { "Amount must be positive" }
-        val client = bank.clients[clientId] ?: throw IllegalStateException("Client $clientId does not exist")
+        val client = bank.clients[clientId] ?: throw IllegalArgumentException("Client $clientId does not exist")
 
             client.balance.computeIfPresent(currency) { _, value -> value + amount }
                 ?: throw IllegalStateException("Currency $currency does not exist")
@@ -41,7 +39,7 @@ class Cashier(private val id: Int, private val bank: Bank) : Thread() {
 
     private fun withdraw(clientId: Int, currency: String, amount: Double) {
         require(amount > 0) { "Amount must be positive" }
-        val client = bank.clients[clientId] ?: throw IllegalStateException("Client $clientId does not exist")
+        val client = bank.clients[clientId] ?: throw IllegalArgumentException("Client $clientId does not exist")
 
             client.balance.computeIfPresent(currency) { _, value ->
                 if (value >= amount) value - amount
@@ -67,6 +65,7 @@ class Cashier(private val id: Int, private val bank: Bank) : Thread() {
 
     private fun transferFunds(senderId: Int, receiverId: Int, currency: String, amount: Double) {
         bank.notifyObservers("Starting transfer from client $senderId client $receiverId, amount: ${String.format("%.2f", amount)} $currency")
+        require(bank.clients.contains(receiverId)) { "Client $receiverId does not exist" }
 
         withdraw(senderId, currency, amount)
         deposit(receiverId, currency, amount)
