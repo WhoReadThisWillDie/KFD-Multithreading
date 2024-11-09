@@ -6,12 +6,20 @@ class Client(val id: Int) {
     val balance = ConcurrentHashMap<String, Double>()
 
     init {
-        balance["RUB"] = 100000.0
-        balance["USD"] = 1000.0
-        balance["EUR"] = 500.0
+        balance["RUB"] = 1000.0
+        balance["USD"] = 100.0
+        balance["EUR"] = 50.0
     }
 
     override fun toString(): String {
-        return "Client $id $balance"
+        val builder = StringBuilder()
+        builder.append("Client $id, balance: {\n")
+
+        for ((key, value) in balance) {
+            builder.append("\t$key: ${String.format("%.2f", value)}\n")
+        }
+
+        builder.append("}")
+        return builder.toString()
     }
 }

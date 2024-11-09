@@ -5,10 +5,7 @@ import model.Transaction
 import util.Observer
 import worker.Cashier
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ScheduledThreadPoolExecutor
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 
 class Bank {
     val clients = ConcurrentHashMap<Int, Client>()
@@ -17,25 +14,25 @@ class Bank {
 
     val transactionQueue = LinkedBlockingQueue<Transaction>()
     private val observers = mutableListOf<Observer>()
+    private val executor = ScheduledThreadPoolExecutor(1)
+
+    private val logLock = Any()
 
     init {
         exchangeRates["USD/RUB"] = 97.0
         exchangeRates["EUR/RUB"] = 104.0
         exchangeRates["EUR/USD"] = 1.1
 
-        cashiers.forEach {
-            it.start()
-        }
-
-        val executor = ScheduledThreadPoolExecutor(1)
         executor.scheduleAtFixedRate({
-            for (currency in exchangeRates.keys()) {
-                exchangeRates[currency] = getRandomExchangeRate(
-                    exchangeRates[currency] ?: throw IllegalStateException("This currency does not exist")
-                )
-                notifyObservers("$currency rate changed to ${String.format("%.2f" ,exchangeRates[currency])}")
+            synchronized(logLock) {
+                for (currency in exchangeRates.keys()) {
+                    exchangeRates[currency] = getRandomExchangeRate(
+                        exchangeRates[currency] ?: throw IllegalStateException("This currency does not exist")
+                    )
+                    notifyObservers("$currency rate changed to ${String.format("%.2f", exchangeRates[currency])}")
+                }
             }
-        }, 10, 10, TimeUnit.SECONDS)
+        }, 0, 10, TimeUnit.SECONDS)
     }
 
     private fun getRandomExchangeRate(currentRate: Double): Double {
@@ -43,12 +40,16 @@ class Bank {
     }
 
     fun addObserver(observer: Observer) {
-        observers.add(observer)
+        synchronized(observers) {
+            observers.add(observer)
+        }
     }
 
     fun notifyObservers(message: String) {
-        observers.forEach {
-            it.update(message)
+        synchronized(logLock) {
+            observers.forEach {
+                it.update(message)
+            }
         }
     }
 
@@ -57,11 +58,26 @@ class Bank {
     }
 
     fun addCashier(cashier: Cashier) {
-        cashiers.add(cashier)
-        cashier.start()
+        synchronized(cashiers) {
+            cashiers.add(cashier)
+            cashier.start()
+        }
     }
 
     fun addTransaction(transaction: Transaction) {
         transactionQueue.add(transaction)
+    }
+
+    fun await() {
+        while (!transactionQueue.isEmpty()) Thread.sleep(100)
+    }
+
+    fun stop() {
+        await()
+
+        cashiers.forEach {
+            it.interrupt()
+        }
+        executor.shutdown()
     }
 }
